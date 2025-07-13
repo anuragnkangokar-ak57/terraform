@@ -1,3 +1,19 @@
+In Terraform, a backend defines where and how Terraform stores its state file — the file that tracks the current state of your infrastructure.
+By default, Terraform stores this file locally as terraform.tfstate. But in real-world setups, you usually want to store state remotely, in a backend like:
+
+AWS S3
+
+Azure Blob Storage
+
+Terraform Cloud
+
+Google Cloud Storage
+
+Consul, etcd, etc.
+
+
+
+
 terraform {
   backend "s3" {
     bucket = "bucket-news3"  # Replace with your S3 bucket name
