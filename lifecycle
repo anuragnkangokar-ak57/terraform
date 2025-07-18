@@ -1,0 +1,37 @@
+lifecycle policy
+
+1.prevent_destroy
+
+Prevents the resource from being destroyed via Terraform.
+
+Terraform will throw an error if a plan would result in deletion.
+
+
+lifecycle {
+  prevent_destroy = true
+}
+
+2.create_before_destroy
+
+Ensures a new resource is created before the old one is destroyed.
+
+Useful for zero-downtime deployments or when a dependency exists.
+
+
+lifecycle {
+  create_before_destroy = true
+}
+
+3.ignore_changes
+
+Tells Terraform to ignore changes to specified attributes during a plan/apply.
+
+Useful for fields that change outside of Terraform (e.g., manually updated tags).
+
+
+lifecycle {
+  ignore_changes = [
+    tags["LastUpdated"],
+    user_data
+  ]
+}
