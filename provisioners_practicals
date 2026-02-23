@@ -1,0 +1,163 @@
+Provisioners
+
+Without using file provisioner
+	provider "aws" {
+	  region = "us-east-1"
+	}
+
+	resource "aws_instance" "ubuntu_web" {
+	  ami                    = "ami-053b0d53c279acc90"   # Ubuntu 22.04 LTS (us-east-1)
+	  instance_type          = "t3.micro"
+	  key_name               = "ak57-keypair"   # Replace
+	  subnet_id              = "subnet-004d17d2fd9f87ecb"
+	  vpc_security_group_ids = ["sg-0336fad0c11ad9243"]
+	  associate_public_ip_address = true
+
+	  provisioner "remote-exec" {
+		inline = [
+		  "sudo apt update -y",
+		  "sudo apt install apache2 -y",
+		  "sudo systemctl start apache2",
+		  "sudo systemctl enable apache2",
+		  "echo '<h1>Apache2 running on Ubuntu via Terraform</h1>' | sudo tee /var/www/html/index.html"
+		]
+
+		connection {
+		  type        = "ssh"
+		  user        = "ubuntu"
+		  private_key = file("~/.ssh/ak57-keypair.pem")
+		  host        = self.public_ip
+		}
+	  }
+	  tags = {
+		Name = "Terraform-Ubuntu-Apache"
+	  }
+	}
+
+	output "public_ip" {
+	  value = aws_instance.ubuntu_web.public_ip
+	}
+
+With using file provisioner and establishing connection separately for each block
+	index.html
+		<h1>Deployed using Terraform File Provisioner 🚀</h1>
+		<p>Ubuntu + Apache2</p>
+	
+	main.tf
+		provider "aws" {
+		  region = "us-east-1"
+		}
+	
+	resource "aws_instance" "ubuntu_web" {
+	  ami                    = "ami-053b0d53c279acc90"   # Ubuntu 22.04 LTS
+	  instance_type          = "t3.micro"
+	  key_name               = "ak57-keypair"  # Replace
+	  subnet_id              = "subnet-004d17d2fd9f87ecb"
+	  vpc_security_group_ids = ["sg-0336fad0c11ad9243"]
+
+	  associate_public_ip_address = true
+
+	  # Step 1: Install Apache
+	  provisioner "remote-exec" {
+		inline = [
+		  "sudo apt update -y",
+		  "sudo apt install apache2 -y",
+		  "sudo systemctl start apache2",
+		  "sudo systemctl enable apache2"
+		]
+
+		connection {
+		  type        = "ssh"
+		  user        = "ubuntu"
+		  private_key = file("~/.ssh/ak57-keypair.pem")
+		  host        = self.public_ip
+		}
+	  }
+
+	  # Step 2: Upload HTML file
+	  provisioner "file" {
+		source      = "index.html"
+		destination = "/home/ubuntu/index.html"
+
+		connection {
+		  type        = "ssh"
+		  user        = "ubuntu"
+		  private_key = file("~/.ssh/ak57-keypair.pem")
+		  host        = self.public_ip
+		}
+	  }
+
+	  # Step 3: Move file to Apache directory
+	  provisioner "remote-exec" {
+		inline = [
+		  "sudo mv index.html /var/www/html/index.html",
+		  "sudo systemctl restart apache2"
+		]
+
+		connection {
+		  type        = "ssh"
+		  user        = "ubuntu"
+		  private_key = file("~/.ssh/ak57-keypair.pem")
+		  host        = self.public_ip
+		}
+	  }
+
+	  tags = {
+		Name = "Ubuntu-Apache-File-Provisioner"
+	  }
+	}
+
+	output "public_ip" {
+	  value = aws_instance.ubuntu_web.public_ip
+	}
+	
+With using file provisioner and establishing connection only once in the resource block	
+	provider "aws" {
+	  region = "us-east-1"
+	}
+
+	resource "aws_instance" "ubuntu_web" {
+	  ami                    = "ami-053b0d53c279acc90"   # Ubuntu 22.04 LTS
+	  instance_type          = "t3.micro"
+	  key_name               = "ak57-keypair"  # Replace
+	  subnet_id              = "subnet-004d17d2fd9f87ecb"
+	  vpc_security_group_ids = ["sg-0336fad0c11ad9243"]
+	  associate_public_ip_address = true
+	# step 1: establishing the connection, Terraform applies this connection configuration to all provisioners inside that resource unless you override it inside a specific provisioner.
+	  connection {
+	  type        = "ssh"
+	  user        = "ubuntu"
+	  private_key = file("~/.ssh/ak57-keypair.pem")
+	  host        = self.public_ip
+	}
+	# Step 2: Install Apache
+	  provisioner "remote-exec" {
+		inline = [
+		  "sudo apt update -y",
+		  "sudo apt install apache2 -y",
+		  "sudo systemctl start apache2",
+		  "sudo systemctl enable apache2"
+		]
+	  }
+
+	# Step 3: Upload HTML file
+	  provisioner "file" {
+		source      = "index.html"
+		destination = "/home/ubuntu/index.html"
+	  }
+
+	# Step 4: Move file to Apache directory
+	  provisioner "remote-exec" {
+		inline = [
+		  "sudo mv index.html /var/www/html/index.html",
+		  "sudo systemctl restart apache2"
+		]
+	  }
+	  tags = {
+		Name = "Ubuntu-Apache-File-Provisioner"
+	  }
+	}
+
+	output "public_ip" {
+	  value = aws_instance.ubuntu_web.public_ip
+	}
